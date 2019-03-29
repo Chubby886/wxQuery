@@ -1,0 +1,81 @@
+# wxQuery
+
+wxWuery 基于Promise的仿jquery的微信小程序框架
+
+Microsoft Small Program Framework Imitating jQuery Based on Promise and jquery
+
+Promise封装
+
+蓝牙
+
+页面通讯
+
+
+app.js 引入 dist/index.js
+
+var $= wx.wxQuery;
+
+
+Page(.......)
+
+
+
+导航
+
+
+/** 
+ * $.go(str1,str2,str3)  
+ * @param str1  [String|Number] 包含数字返回 不包含数字是 普通跳转
+ * @param str2  [Object]:  url参数
+ * @param str3  [Page]：this/当前page
+ 
+   @call :function(){
+
+	$.go([-1,-2,-3.......])  
+
+	$.go("/pages/index/index")
+	
+	$.go("pages/index/index")  
+
+	$.go("pages/index/index",{target: [navigateBack, reLaunch , self, open, top ]})
+	
+   }
+*/
+
+
+
+
+/** 
+ * $.page(str1,str2,str3)  
+ * @param str1  [String] 
+ * @param str2  [Page]:  this/当前page
+ 
+   @call :function(){
+
+	$.page()	   ==>   Page
+
+	$.page("data")     ==>   Page.data
+	
+	$.page("route")      ==>   Page.__route__
+
+	$.page(function name)      ==>   Page.[funname]
+	
+   }
+*/
+
+
+
+/** 
+ * $.app(str1)  
+ * @param str1  [Page]:  this/当前page
+ 
+   @call :function(){
+
+	$.app()	   ==>   Page
+
+	$.app("data")     ==>   Page.globalData
+	
+   }
+*/
+
+
