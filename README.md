@@ -10,6 +10,8 @@ Promise封装
 
 页面通讯
 
+老旧微信小程序api兼容
+
 
 app.js 引入 dist/index.js
 
