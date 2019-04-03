@@ -75,7 +75,7 @@
 						},
 						fail: function (res) {  
 							if (that.DEBUG) { that.log(res); }  
-							res.errMsg = res.errMsg.replace(`${callback}:fail `);
+							res.errMsg = res.errMsg.replace(`${callback}:fail `,"");
 							reject(res,call_data); 
 						}
 					})

@@ -84,7 +84,7 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 						},
 						fail: function (res) {  
 							if (that.DEBUG) { that.log(res); }  
-							res.errMsg = res.errMsg.replace(`${callback}:fail `);
+							res.errMsg = res.errMsg.replace(`${callback}:fail `,"");
 							reject(res,call_data); 
 						}
 					})
