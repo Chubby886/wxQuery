@@ -18,7 +18,7 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 	let bletools = wxapi.bletools;
 	let event_bus = wxapi.event;
 	let ownPropertyNames = wxapi.implement;
-	var ArrayProto = Array.prototype, ObjectProto = Object.prototype, nativeForEach = ArrayProto.forEach, nativeIndexOf = ArrayProto.indexOf, toStr = ObjectProto.toString;
+	var ArrayProto = Array.prototype, ObjectProto = Object.prototype, nativeForEach = ArrayProto.forEach, nativeIndexOf = ArrayProto.indexOf, stringIndexOf = String.indexOf, toStr = ObjectProto.toString;
 	var hasOwn = {}.hasOwnProperty;
 	let CURRENT_ROUTE = "";
 	var _Regexs = {
@@ -31,11 +31,8 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 		url: /(\w+)=([^&#]*)/igm
 	}
 	var wxapi = wx;
-	
 
-	/**
-	 * 小程序的promise没有finally方法，自己扩展下
-	 */
+	/* 小程序的promise没有finally方法，自己扩展下   */
 	Promise.prototype.finally = function (callback) {
 		var Promise = this.constructor;
 		return this.then(function (value) {
@@ -44,17 +41,84 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			Promise.resolve(callback()).then(function () { throw reason; });
 		});
 	}
+	/**
+	* forEach遍历数组
+	* @param callback [function] 回调函数；
+	* @param context [object] 上下文；
+	*/
+	function forEach(params, callback, context) {
+		var length = params.length;
+		if (length === undefined) {
+			for (var name in params) {
+				if (params.hasOwnProperty(name)) { if (callback.call(params[name], params[name], name) === false) { break; } }
+			}
+		} else {
+			for (var i = 0; i < length; i++) { if (callback.call(params[i], params[i], i) === false) { break; } }
+		}
+	}
 	function wxQuery(selector, context) { return new wxQuery.prototype.elem(selector, context); }
-	function Promisify(callback, data = {}) {
-		var that = wxQuery;
-		return new Promise((resolve, reject) => {
-			var params = that.extend({}, data, {
-				success: function (res) { if (that.DEBUG) { that.log(res); } resolve(res); },
-				fail: function (res) { if (that.DEBUG) { that.log(res); } reject(res); }
-			})
-			wxapi[callback] && wxapi[callback](params);
+	function promisify(callback) {var that = wxQuery;
+		var args = Array.prototype.slice.apply(arguments);var app = args.shift();
+		return new Promise((resolve, reject)=>{
+			if(that.has(wxapi,callback)){
+				if(that.isNotEmpty(args) && args.length>0 && that.is(args[0],"object")){
+					var call_data = args[0];
+					that.extend(call_data, {
+						success: function (res = {cookies=[],data={}} = {}) {
+							if (that.DEBUG) { that.log(res); }
+							console.log(res)
+							if(that.has(res,"data") || that.has(res,"cookies")){
+								var res_data = res.data; var res_cookie = res.cookies; 
+								if(that.is(res_data,"string")){
+									if(/^<[^<>]+>/gm.test(res_data)){
+										reject(res,call_data);
+										return ;
+									}
+									res_data = res_data.replace(/\ufeff/g,"");
+									res_data = JSON.parse(res_data);
+								}
+								resolve(res_data,res_cookie);
+								return ;
+							}
+							resolve(res);
+						},
+						fail: function (res) {  
+							if (that.DEBUG) { that.log(res); }  
+							res.errMsg = res.errMsg.replace(`${callback}:fail `);
+							reject(res,call_data); 
+						}
+					})
+				}
+				wxapi[callback] && wxapi[callback].apply(that,args);
+			}else{
+				reject({ "statusCode":404, "errMsg":`${callback} is not function; API is old. ` });
+			}
 		})
 	}
+	var old_api =  ["canIUse","getUpdateManager","getLaunchOptionsSync","onPageNotFound","onError","onAudioInterruptionEnd","onAudioInterruptionBegin","onAppShow","onAppHide","offPageNotFound","offError","offAudioInterruptionEnd","offAudioInterruptionBegin","offAppShow","offAppHide","setEnableDebug","getLogManager","reLaunch","navigateBack","showToast","showModal","showLoading","showActionSheet","hideToast","hideLoading","showNavigationBarLoading","setNavigationBarTitle","setNavigationBarColor","hideNavigationBarLoading","setBackgroundTextStyle","setBackgroundColor","showTabBarRedDot","showTabBar","setTabBarStyle","setTabBarItem","setTabBarBadge","removeTabBarBadge","hideTabBarRedDot","hideTabBar","loadFontFace","stopPullDownRefresh","startPullDownRefresh","pageScrollTo","createAnimation","setTopBarText","nextTick","getMenuButtonBoundingClientRect","onWindowResize","offWindowResize","request","downloadFile","uploadFile","sendSocketMessage","onSocketOpen","onSocketMessage","onSocketError","onSocketClose","connectSocket","closeSocket","stopLocalServiceDiscovery","startLocalServiceDiscovery","onLocalServiceResolveFail","onLocalServiceLost","onLocalServiceFound","onLocalServiceDiscoveryStop","offLocalServiceResolveFail","offLocalServiceLost","offLocalServiceFound","offLocalServiceDiscoveryStop","setStorageSync","setStorage","removeStorageSync","removeStorage","getStorageSync","getStorageInfoSync","getStorageInfo","getStorage","clearStorageSync","clearStorage","createMapContext","saveImageToPhotosAlbum","previewImage","getImageInfo","compressImage","chooseMessageFile","chooseImage","saveVideoToPhotosAlbum","createVideoContext","chooseVideo","stopVoice","setInnerAudioOption","playVoice","pauseVoice","getAvailableAudioSources","createInnerAudioContext","createAudioContext","stopBackgroundAudio","seekBackgroundAudio","playBackgroundAudio","pauseBackgroundAudio","onBackgroundAudioStop","onBackgroundAudioPlay","onBackgroundAudioPause","getBackgroundAudioPlayerState","getBackgroundAudioManager","createLivePusherContext","createLivePlayerContext","stopRecord","startRecord","getRecorderManager","createCameraContext","openLocation","getLocation","chooseLocation","updateShareMenu","showShareMenu","hideShareMenu","getShareInfo","createCanvasContext","canvasToTempFilePath","canvasPutImageData","canvasGetImageData","saveFile","removeSavedFile","openDocument","getSavedFileList","getSavedFileInfo","getFileSystemManager","getFileInfo","login","checkSession","navigateToMiniProgram","navigateBackMiniProgram","getAccountInfoSync","getUserInfo","reportMonitor","reportAnalytics","requestPayment","authorize","openSetting","getSetting","chooseAddress","openCard","addCard","chooseInvoiceTitle","chooseInvoice","startSoterAuthentication","checkIsSupportSoterAuthentication","checkIsSoterEnrolledInDevice","getWeRunData","stopWifi","startWifi","setWifiList","onWifiConnected","onGetWifiList","getWifiList","getConnectedWifi","connectWifi","stopBeaconDiscovery","startBeaconDiscovery","onBeaconUpdate","onBeaconServiceChange","getBeacons","addPhoneContact","writeBLECharacteristicValue","readBLECharacteristicValue","onBLEConnectionStateChange","onBLECharacteristicValueChange","notifyBLECharacteristicValueChange","getBLEDeviceServices","getBLEDeviceCharacteristics","createBLEConnection","closeBLEConnection","stopBluetoothDevicesDiscovery","startBluetoothDevicesDiscovery","openBluetoothAdapter","onBluetoothDeviceFound","onBluetoothAdapterStateChange","getConnectedBluetoothDevices","getBluetoothDevices","getBluetoothAdapterState","closeBluetoothAdapter","getBatteryInfoSync","getBatteryInfo","setClipboardData","getClipboardData","stopHCE","startHCE","sendHCEMessage","onHCEMessage","getHCEState","onNetworkStatusChange","getNetworkType","setScreenBrightness","setKeepScreenOn","onUserCaptureScreen","getScreenBrightness","makePhoneCall","stopAccelerometer","startAccelerometer","onAccelerometerChange","stopCompass","startCompass","onCompassChange","stopDeviceMotionListening","startDeviceMotionListening","onDeviceMotionChange","stopGyroscope","startGyroscope","onGyroscopeChange","onMemoryWarning","scanCode","vibrateShort","vibrateLong","createWorker","getExtConfigSync","getExtConfig","createSelectorQuery","createIntersectionObserver"]
+	var _wxQuery = {}
+	forEach(old_api,function(item,key) {
+		if(new RegExp("canI|Sync|onApp|offApp|PageNot|Manager|offAudio|Error|create|onBack|offLocal|onLocal|Window|nextTick|report|onWifi|onGet|onBeacon|onBLE|onBlue|getMenu|Change|onHCE|onUser|Memory","ig").test(item)&&item!='createBLEConnection'&& item!="notifyBLECharacteristicValueChange"){
+			_wxQuery[item] = function(){ return `${item} is not function; API is old. ` }
+		}else{
+			_wxQuery[item] = function(params){
+				var args = Array.prototype.slice.apply(arguments);args.unshift(item); 
+				return promisify.apply(this,args); 
+			}
+		}
+	})
+	forEach(wxapi,function(item,key) {
+		if(key!="wxQuery"){
+			if(new RegExp("canI|Sync|onApp|offApp|PageNot|Manager|offAudio|Error|create|onBack|offLocal|onLocal|Window|nextTick|report|onWifi|onGet|onBeacon|onBLE|onBlue|getMenu|Change|onHCE|onUser|Memory","ig").test(key)&&key!='createBLEConnection'&& key!="notifyBLECharacteristicValueChange"){
+				_wxQuery[key] = item
+			}else{
+				_wxQuery[key] = function(params){ 
+					var args = Array.prototype.slice.apply(arguments);args.unshift(key); 
+					return promisify.apply(this,args); 
+				}
+			}
+		}
+	})
 	function ispage(params) {
 		if (wxQuery.is(params, "object")) {
 			if (wxQuery.has(params, "__route__")) { return true } 
@@ -117,14 +181,19 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 		},
 		val: function () {
 			var elem = this.e;
-			return (this.detail.value) || "";
+			return (elem.detail.value) || "";
 		},
 		id: function () { var elem = this.e; return (elem.currentTarget.id) || ""; },
 		data: function (params) {
 			var elem = this.e;
-			var $dataset = elem.currentTarget["dataset"];
-			if (wxQuery.isEmpty(params)) { return $dataset || {}; }
-			else { return $dataset[params] || null; }
+			var $dataset, dataset = elem;
+			if (wxQuery.has(elem, "currentTarget")) { dataset = elem.currentTarget;}
+			if (wxQuery.has(dataset,"dataset")){ $dataset = dataset["dataset"]; }
+			if (wxQuery.has(dataset, "data")) { $dataset = dataset["data"]; }
+			if (wxQuery.isNotEmpty($dataset)){
+				if (wxQuery.isEmpty(params)) { return $dataset; }
+				else { return $dataset[params]; }
+			}
 		},
 		offset: function (params) {
 			var elem = this.e;
@@ -183,16 +252,24 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 		// Return the modified object
 		return target;
 	};
+	wxQuery.extend(_wxQuery);
 	wxQuery.extend({
 		DEBUG: false,
-		Promise, Promisify,
+		Promise, promisify,
+		len:function getLength(o){
+			if (this.is(o, 'string')) { return o.length; } 
+			else if (this.is(o, 'object')) {
+				var n = 0;
+				for (var i in o) { n++; }
+				return n;
+			}
+			return false;
+		},
 		btoa: function btoa(str) {
 			function btoa(s) {
 				let i;
 				s = `${s}`;
-				for (i = 0; i < s.length; i++) {
-					if (s.charCodeAt(i) > 255) { return null; }
-				}
+				for (i = 0; i < s.length; i++) { if (s.charCodeAt(i) > 255) { return null; } }
 				let out = "";
 				for (i = 0; i < s.length; i += 3) {
 					const groupsOfSix = [undefined, undefined, undefined, undefined];
@@ -298,10 +375,6 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			// Going backwards: from bytestream, to percent-encoding, to original string.
 			return decodeURIComponent(this.atob(str).split('').map(function (c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
 		},
-		setid:function($) {
-			var route = this.page("route");
-			this.id = (this.encode64(route),route)
-		},
 		_wx_: wxapi,
 		is: function is(o, type) {
 			var isnan = { "NaN": 1, "Infinity": 1, "-Infinity": 1 }
@@ -335,20 +408,7 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			console.log(`日志>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\r\n\r\n`, params, "\r\n\r\n");
 		},
 		decrypt: function () { },
-		each: function (params, callback, context) {
-			var length = params.length;
-			if (length === undefined) {
-				for (var name in params) {
-					if (params.hasOwnProperty(name)) {
-						if (callback.call(params[name], params[name], name) === false) { break; }
-					}
-				}
-			} else {
-				for (var i = 0; i < length; i++) {
-					if (callback.call(params[i], params[i], i) === false) { break; }
-				}
-			}
-		},
+		each:forEach,
 		values: function (params) {
 			var that = this, results = [];
 			if (that.isEmpty(params)) { return results; }
@@ -361,6 +421,7 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			var found = false, that = this;
 			if (that.isEmpty(params)) { return found; }
 			if (nativeIndexOf && params.indexOf === nativeIndexOf) { return params.indexOf(target) != -1; }
+			if (stringIndexOf && params.indexOf === stringIndexOf) { return params.indexOf(target) != -1; }
 			that.each(params, function (value) {
 				if (found || (found = (value === target))) { return {}; }
 			});
@@ -368,8 +429,8 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 		},
 		find: function (params, target) {
 			var found = false, that = this;
-			if (that.isEmpty(params)) { return found; }
-			else { return params.indexOf(target) != -1; }
+			if (that.isEmpty(params)) { return false; }
+			else { return params.indexOf(target) > -1; }
 		},
 		has: function hasProp(obj, prop) {
 			if (this.isEmpty(obj) || this.isEmpty(prop)) { return false }
@@ -566,18 +627,35 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 		cache: function (params, obj, expires) {
 			var that = this;
 			if (wxQuery.isEmpty(obj)) {
-				return Promisify("getStorage", { key: params }).then(function (res) {
+				return this.getStorage({ key: params }).then(function (res) {
 					return (res.data)
 				}).catch(function (res) { return null; });
 			}
-			return Promisify("setStorage", { key: params, data: obj });
+			return this.setStorage({ key: params, data: obj });
 		},
 		rmCache: function (params) {
 			if (wxQuery.isEmpty(params)) {
-				return Promisify("clearStorage", { key: params })
+				return this.clearStorage({ key: params })
 			}
-			return Promisify("removeStorage", { key: params });
-		}
+			return this.removeStorage({ key: params });
+		},
+		throttle:function(delay,no_trailing,callback,debounce_mode ) {
+			var timeout_id, last_exec = 0;
+			if ( typeof no_trailing !== 'boolean' ) { debounce_mode = callback;  callback = no_trailing; no_trailing = undefined; }
+			function wrapper() {
+				var that = this, elapsed = +new Date() - last_exec, args = arguments;
+				function exec() { last_exec = +new Date(); callback.apply( that, args ); };
+				function clear() { timeout_id = undefined;  };
+				if ( debounce_mode && !timeout_id ) { exec(); }
+				timeout_id && clearTimeout( timeout_id );
+				if ( debounce_mode === undefined && elapsed > delay ) {exec();} 
+				else if ( no_trailing !== true ) {
+					timeout_id = setTimeout( debounce_mode ? clear : exec, debounce_mode === undefined ? delay - elapsed : delay );
+				}
+			};
+			return wrapper;
+		},
+		debounce:function( delay, at_begin, callback ) { return callback === undefined ? this.jq_throttle(delay,at_begin,false):this.jq_throttle(delay,callback,at_begin!==false); }
 	})
 	wxQuery.extend({
 		$servers: {
@@ -585,12 +663,6 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			socketServer: "",
 			uploadServer: "",
 			downloadServer: ""
-		},
-		getUserInfo: function (params = {}) {
-			var _default = { withCredentials: true };
-			return Promisify("getUserInfo", this.extend({}, _default, params)).then(function (res) {
-				return ({ userInfo: res.userInfo, encryptedData: res.encryptedData, iv: res.iv, signature: res.signature })
-			});
 		},
 		userinfo: function (params = {}) {
 			var that = this;
@@ -609,8 +681,8 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 					return that.confirm("本小程序需用户授权，请重新点击按钮授权。", { title: '用户授权', confirmColor: '#F45C43' })
 				}
 			} else {
-				var can_user = wxapi.canIUse('button.open-type.getUserInfo');
-				let userinfos = wxapi.getStorageSync('x-userinfo');
+				var can_user = that.can('button.open-type.getUserInfo');
+				let userinfos = that.getStorageSync('x-userinfo');
 				if (that.has(userinfos, 'nickName')) {
 					return new Promise(function (resolve, reject) { resolve({ userinfo: userinfos }); })
 				} else {
@@ -628,17 +700,17 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 						// 在没有 open-type=getUserInfo 版本的兼容处理
 						return that.getUserInfo().then(function (res) {
 							app.globalData.userInfo = res.userInfo;
-							return ({ userinfo: res.userInfo, encryptedData: res.encryptedData, iv: res.iv, signature: res.signature })
+							return ({ userinfo: res.userinfo, encryptedData: res.encryptedData, iv: res.iv, signature: res.signature })
 						})
 					}
 				}
 			}
 		},
 		clipbrd: function (params) {
-			if(this.isEmpty(params)){ return Promisify("getClipboardData") }
-			return Promisify("setClipboardData",{data:params.toString()})
+			if(this.isEmpty(params)){ return this.getClipboardData() }
+			return this.setClipboardData({data:params.toString()})
 		},
-		battery:function () { return Promisify("getBatteryInfo") },
+		battery:function () { return this.getBatteryInfo() },
 		getApp: function () { return getApp() },
 		confirm: function (params, data = {}) {
 			var _default = {
@@ -649,62 +721,65 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 				cancelColor: '#999999',
 				showCancel: true
 			}
-			if ((this.is(params, "string") || this.is(params, "number")) && this.isNotEmpty(data)) { data.content = params.toString(); data = this.extend({}, _default, data); }
+			if ((this.is(params, "string") || this.is(params, "number"))) { 
+				data.content = params.toString(); 
+				data = this.extend({}, _default, data); 
+			}
 			else if (this.is(params, "object") && this.isEmpty(data)) { data = this.extend({}, _default, params); }
-			return Promisify("showModal", data);
+			return this.showModal(data);
 		},
 		alert: function (params, data = {}) { return this.confirm(params, this.extend({}, data, { showCancel: false })); },
 		actionSheet: function (list = [], color = "#000000") {
-			return Promisify("showActionSheet", { "itemList": list, "itemColor": color });
+			return this.showActionSheet({ "itemList": list, "itemColor": color });
 		},
 		loading: function (params = {}) {
 			var _default = { "mask": true, "title": "加载中" };
 			params = this.extend({}, _default, params);
-			return Promisify("showLoading", params);
+			return this.showLoading(params);
 		},
 		scrollTo: function (params = 0, time = 300) {
-			return Promisify("pageScrollTo", { "scrollTop": params, "duration": time });
+			return this.pageScrollTo({ "scrollTop": params, "duration": time });
 		},
 		animation: function (params = {}) {
 			var _default = { "duration": 400, timingFunction: "linear", delay: 0, transformOrigin: "50% 50% 0" }
-			return wxapi.createAnimation(this.extend({}, _default, params));
+			return this.createAnimation(this.extend({}, _default, params));
 		},
 		location:function (params){ 
-			return Promisify("getLocation",{type:params});
-		 },
-		map:function (id,page){ return page?wxapi.createMapContext(id,page):wxapi.createMapContext(id); },
-		canvas:function (id,page){ return page?wxapi.createCanvasContext(id,page):wxapi.createCanvasContext(id); },
-		video:function (id,page){ return page?wxapi.createVideoContext(id,page):wxapi.createVideoContext(id); },
-		audio:function (){ return wxapi.createInnerAudioContext(id); },
-		camera:function (){ return wxapi.createCameraContext(id); },
+			return this.getLocation({type:params});
+			},
+		map:function (id,page){ return page?this.createMapContext(id,page):this.createMapContext(id); },
+		canvas:function (id,page){ return page?this.createCanvasContext(id,page):this.createCanvasContext(id); },
+		video:function (id,page){ return page?this.createVideoContext(id,page):this.createVideoContext(id); },
+		audio:function (){ return this.createInnerAudioContext(id); },
+		camera:function (){ return this.createCameraContext(id); },
 		Scan: function (params = {}) {
 			var _default = { "onlyFromCamera": false, scanType: ['barCode', 'qrCode'] }
-			return Promisify("scanCode", this.extend({}, _default, params));
+			return this.scanCode(this.extend({}, _default, params));
 		},
-		title:function(params){ return Promisify("setNavigationBarTitle", { title: params }); },
+		title:function(params){ return this.setNavigationBarTitle({ title: params }); },
 		tel: function (params) {
 			if ((_Regexs.phone).test(params) || (_Regexs.phone1).test(params)) {
-				return Promisify("makePhoneCall", { "phoneNumber": params.toString() });
+				return this.makePhoneCall({ "phoneNumber": params.toString() });
 			}
 			else { return this.alert("当前号码有误") }
 		},
 		addtel: function (params = {}) {
-			return Promisify("addPhoneContact", params);
+			return this.addPhoneContact(params);
 		},
 		card: function (params = {}) {
 			params = this.extend({}, { cardList: [] }, params);
-			return Promisify("openCard", params);
+			return this.openCard(params);
 		},
 		addcard: function (params = {}) {
 			params = this.extend({}, { cardList: [] }, params);
-			return Promisify("addCard", params);
+			return this.addCard(params);
 		},
 		os: function (params) {
 			try {
 				var { SDKVersion = '0.0.0', brand = "unknow",
 					screenWidth, windowWidth, screenHeight, windowHeight, statusBarHeight = 0,
 					language, version, platform, system, model
-				} = wxapi.getSystemInfoSync();
+				} = this.getSystemInfoSync();
 				var win_info = {
 					"sdk": SDKVersion,
 					brand: brand == "devtools" ? "unknow" : brand,
@@ -718,8 +793,8 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 				return {};
 			}
 		},
-		getNetInfo: function () { return Promisify("getNetworkType"); },
-		getSystemInfo: function () { return Promisify("getSystemInfo"); },
+		getNetInfo: function () { return this.getNetworkType(); },
+		getSystemInfo: function () { return this.getSystemInfo(); },
 		system: function () {
 			var that = this;
 			var getNetInfo = that.getNetInfo()
@@ -727,12 +802,12 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			return new Promise(function (resolve, reject) {
 				Promise.all([getNetInfo, systemInfo]).then(resolve).catch(reject)
 			})
-
 		},
-		canIUse: function (params) {
-			if (wxapi.canIUse) { return wxapi.canIUse(params); }
+		can: function (params) {
+			if (this.canIUse) { return this.canIUse(params); }
+			else{ return false; }
 		},
-		go(url, params, page) {
+		go(url, params ={"islogin":false,"target":"navigateTo"}, page) {
 			var $page = this.page(null, page);
 			var $route = this.page("route", $page)
 			var $prevPage = this.prevPage();
@@ -740,10 +815,19 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			var _pages = __wxConfig.pages;
 			
 			if (url.startsWith("/pages")) { url = url.substring(1,url.length); }
-			if(!this.find(_pages,url)){ throw Error("Can't navigate the same page!"); }
-			if (url.startsWith("pages/") && $route == url) { throw Error("Can't navigate the same page!"); }
-			
-			//this.$keys(params);
+			var userinfo = this.getStorageSync("x-userinfo")
+			if(params.islogin && this.isEmpty(userinfo)){
+				params = this.extend({},params,{ redirect:url })
+				url = "login/index";
+			}
+
+			if(!url.startsWith("pages/")){
+				var _length = 0;
+				wxQuery.each(_pages,function(item,index){
+					if(item.indexOf(url)>-1){ url = item; _length = _length+1; }
+				})
+				if(_length<1){ throw Error("You are sure you want to navigate?"); }
+			}
 			var _target = "navigateTo";
 			if (/^-[1-9]*/.test(url)) { _target = "navigateBack"; }
 			else if (this.has(params, "target")) {
@@ -754,18 +838,16 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 				else if (/^-[1-9]*/.test(p_target) || new RegExp("back|return|out", "gm").test(p_target)) { _target = "navigateBack"; }
 				else if (new RegExp("reLaunch|all|launch", "gm").test(p_target)) { _target = "reLaunch"; }
 			}
-			else { _target = "navigateTo"; }
 			
 			var _tapbar = __wxConfig.tabBar.list;
 			wxQuery.each(_tapbar,function(item,index){
 				var pagePath = item.pagePath.replace(/.html$/g, "");
-				if(url.startsWith("pages/")){
-					if(url==pagePath){ _target = "switchTab"; }
-				}
+				if(url.startsWith("pages/")){ if(url==pagePath){ _target = "switchTab"; } }
 			})
+			console.log(url,_target)
 			if (/^-[1-9]*/.test(url)) { url = Math.abs(parseInt(url)); } 
 			else if (_target != "switchTab") { url = this.paramUrl(params,url) }
-			return Promisify(_target, { url: "/"+url, delta: url});
+			return this[_target]({ url: "/"+url, delta: url});
 		},
 		getPages: function () {
 			var that = this;
@@ -789,6 +871,11 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			else { params = callback; }
 			return page[params];
 		},
+		data: function (params, page){
+			var dataset = this.page("data");
+			if (this.isNotEmpty(params)){ return dataset[params]; }
+			return this.page("data")
+		},
 		app: function (params) {
 			var page = this.getApp();
 			return this.page(params, page)
@@ -801,24 +888,38 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			var that = this;
 			var _default = { 'signType': 'MD5', };
 			params = that.extend({}, _default, params);
-			return Promisify("requestPayment", params);
+			return this.requestPayment(params);
 		},
 		login: function () {
-			var wx_login = Promisify("login");
+			var wx_login = this.login();
 			return wx_login();
 		},
 		fit: function (params = {}) {
-			if (wxapi.getSetting) {
-				return Promisify("getSetting");
+			if (this.getSetting) {
+				return this.getSetting();
 			}
 			else { return new Promise((resolve, reject) => { reject(-1) }) }
+		},
+		auth: function (params = "scope.userInfo"){
+			return new Promise((resolve, reject) => {
+				wxapi.getSetting({
+					success: (response) => {
+						if (response.authSetting[params]) { resolve(true) }
+						wxapi.authorize({
+							scope: params,
+							success: () => { resolve(true) },
+							fail: () => { reject(false) }
+						})
+					}
+				})
+			})
 		},
 		update: function () {
 			var that = this;
 			return new Promise(function (resolve, reject) {
-				if (wxapi.getUpdateManager) {
+				if (that.getUpdateManager) {
 					// 微信版本更新，处理微信缓存问题
-					const updateManager = wxapi.getUpdateManager();
+					const updateManager = that.getUpdateManager();
 					updateManager.onCheckForUpdate(function (res) { console.log("版本是否有更新", res.hasUpdate); resolve(res); })
 					updateManager.onUpdateReady((res) => {
 						that.confirm("小程序版本已更新，为给您提供更好的服务，请重启升级小程序！", {
@@ -833,14 +934,14 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 							})
 					});
 				} else {
-					reject({ isupdate: !!wxapi.getUpdateManager });
+					reject({ isupdate: !!that.getUpdateManager });
 				}
 			})
 
 		},
 		ajax: function (params) {
 			var that = this;
-			let wx_token = wxapi.getStorageSync("WX_TOKEN");
+			let wx_token = this.getStorageSync("WX_TOKEN");
 			var _default = {
 				data: {},
 				method: 'POST',
@@ -852,31 +953,32 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			}
 			let wx_link = that.link || "";
 			params = that.extend({}, _default, params);
-			if (that.isEmpty(params.url)) { wxQuery.log("request: url is null"); return false; }
-			else if ((params.url).indexOf("http") < 0 || (params.url).indexOf("https") < 0) {
-				(params.url) = `${wx_link}${params.url}`
+			var p_link = params.url;
+			if (that.isEmpty(p_link)) { wxQuery.log("request: url is null"); return false; }
+			else if ( !new RegExp("http:|https:","ig").test(p_link) ) {
+				(params.url) = `${wx_link}${p_link}`
 			}
 			if (wxQuery.isNotEmpty(wx_token)) {
 				params.header = that.extend({}, params.header || {}, { "x-Authorization": wx_token })
 			}
-			return Promisify("request", params);
+			return this.request(params);
 		},
 		get: function ($url, $data = {}, $dataType = "json") {
 			return this.ajax({ url: $url, data: $data, method: "GET", dataType: $dataType });
 		},
 		post: function ($url, $data = {}, $dataType = "json") {
-			return this.$ajax({ url: $url, data: $data, method: "POST", dataType: $dataType });
+			return this.ajax({ url: $url, data: $data, method: "POST", dataType: $dataType });
 		},
-		system: function () { return Promisify("getSystemInfo"); },
+		system: function () { return this.getSystemInfo(); },
 		saveImg: function ($url) {
 			var that = this;
-			let wx_token = wxapi.getStorageSync("WX_TOKEN");
-			var result = Promisify("saveImageToPhotosAlbum", { filePath: $url }).catch(function ({ errMsg }) {
+			let wx_token = that.getStorageSync("WX_TOKEN");
+			var result = that.saveImageToPhotosAlbum({ filePath: $url }).catch(function ({ errMsg }) {
 				console.log(errMsg.indexOf("fail auth deny"))
 				if (errMsg.indexOf("fail auth deny") > -1) {
-					return Promisify("getSetting").then(function ({ authSetting }) {
+					return that.getSetting().then(function ({ authSetting }) {
 						if (!authSetting['scope.writePhotosAlbum']) {
-							return Promisify("authorize", { scope: 'scope.writePhotosAlbum', }).then(function () {
+							return that.authorize({ scope: 'scope.writePhotosAlbum', }).then(function () {
 								return that.$saveImg($url);
 							})
 						}
@@ -888,7 +990,7 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 		upload: function ($url, localImgs = [], $data = {}) {
 			var that = this;
 			let result = null;
-			let wx_token = wxapi.getStorageSync("WX_TOKEN");
+			let wx_token = that.getStorageSync("WX_TOKEN");
 			var _default = {
 				name: 'file[]',
 				header: { "Content-Type": "multipart/form-data" },
@@ -896,7 +998,7 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			let wx_link = that.link || "";
 			var params = {};
 			if (that.isEmpty($url)) {
-				wxapi.log("request: url is null")
+				that.log("request: url is null")
 				return false;
 			} else if (($url).indexOf("http") < 0 || ($url).indexOf("https") < 0) {
 				(params.url) = `${wx_link}${$url}`
@@ -913,11 +1015,11 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 				} else {
 					params = wxQuery.extend({}, params, { filePath: localImgs[0] });
 				}
-				result = Promisify("uploadFile", params)
+				result = that.uploadFile(params)
 			} else {
 				var promiseList = localImgs.map((item, a, b, c) => {
 					params = wxQuery.extend({}, params, { filePath: item });
-					return Promisify("uploadFile", params);
+					return that.uploadFile(params);
 				});
 				// 使用Primise.all来执行promiseList
 				const result = Promise.all(promiseList).then((res) => {
@@ -933,15 +1035,15 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 		download: function (localImgs = []) {
 			var that = this;
 			let result = null;
-			let wx_token = wxapi.getStorageSync("WX_TOKEN");
+			let wx_token = this.getStorageSync("WX_TOKEN");
 			var _default = { header: { "Content-Type": "multipart/form-data" } };
 			let wx_link = that.link || "";
 			var params = {};
 			if (that.isEmpty($url)) {
-				wxapi.log("request: url is null")
+				that.log("request: url is null")
 				return false;
 			} else if (($url).indexOf("http") < 0 || ($url).indexOf("https") < 0) {
-				wxapi.log("request: url is null")
+				that.log("request: url is null")
 			} else { (params.url) = $url }
 			if (that.isNotEmpty(wx_token)) {
 				params.header = that.extend({}, params.header, { "x-Authorization": wx_token })
@@ -952,11 +1054,11 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 				} else {
 					params = wxQuery.extend({}, params, { filePath: localImgs[0] });
 				}
-				result = Promisify("downloadFile", params)
+				result = that.downloadFile(params)
 			} else {
 				var promiseList = localImgs.map((item, a, b, c) => {
 					params = wxQuery.extend({}, params, { filePath: item });
-					return Promisify("downloadFile", params);
+					return that.downloadFile(params);
 				});
 				// 使用Primise.all来执行promiseList
 				const result = Promise.all(promiseList).then((res) => {
@@ -969,12 +1071,12 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 			}
 			return result;
 		},
-		hideTabBar: function (params) {
+		tabbar: function (params) {
 			var _default = { aniamtion: false };
 			var that = this;
 			params = that.extend({}, _default, params);
-			return Promisify("hideTabBar", params).catch(function () {
-				setTimeout(function () { return that.hideTabBar(params); }, 500);
+			return that.hideTabBar(params).catch(function () {
+				setTimeout(function () { return that.tabbar(params); }, 500);
 			});
 		},
 		className:function classNames() {
@@ -995,57 +1097,51 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 				}
 			}
 			return classes.join(' ');
-		}
+		},
 	})
-
 	wxQuery.extend({
-		/**
-		 * 封装后的 navigate 方法
-		 * @param {path：静态路径，params: {}}
-		 */
-		navigate: function navigate(data = { path = "", params } = {}) {
-			return route(data, "navigateTo")
+		startSoter: function (params){
+			var that = this;
+			var _default = { requestAuthModes: ["fingerPrint"], authContent:"请用指纹解锁" };
+			params = that.extend({}, _default, params);
+			return that.startSoterAuthentication(params)
 		},
-
-		/**
-		 * 封装后的 redirect 方法
-		 * @param {path：静态路径，params: {}}
-		 */
-		redirect: function redirect(data = { path = "", params } = {}) {
-			return route(data, "redirectTo")
+		isSupportSoter:function(){ return this.checkIsSupportSoterAuthenticatio(); },
+		isSoterInDevice: function (params) {
+			var that = this;
+			params = that.extend({}, { checkAuthMode: "fingerPrint" }, { checkAuthMode: params });
+			return that.checkIsSoterEnrolledInDevice(params)
 		},
-
-		/**
-		 * 封装后的 switchTab 方法
-		 * @param {path：静态路径，params: {}}
-		 */
-		switchTab: function switchTab(data = { path = "", params } = {}) {
-			return route(data, "switchTab");
-		},
-
-		/**
-		 * 封装后的 reLaunch 方法
-		 * @param {path：静态路径，params: {}}
-		 */
-		reLaunch: function reLaunch(data = { path = "", params } = {}) {
-			return route(data, "reLaunch");
-		},
-
-		/**
-		 * 设置上一页面的数据，并返回
-		 */
-		navigateBack: function navigateBack(data = {}, delta = {}) {
-			let deltaNum = 1
-			if (delta.hasOwnProperty("delta")) { deltaNum = delta.delta }
-			if (data) {
-				const length = getCurrentPages().length;
-				var prePage = getCurrentPages()[length - 1 - deltaNum]
-				var prePage = getCurrentPages()[length - 1 - deltaNum]
-				if (prePage) { prePage.setData(data) }
+		Suppor: function (oname = "fingerPrint", otitle ="请用指纹解锁"){
+			var that = this;
+			var _default = { code: "404", msg: "您的设备不支持指纹识别" };
+			function errorFn(params) {
+				params = that.extend({}, _default, params);
+				return new Promise(function (resolve, reject) { reject(params) })
 			}
-			wxapi.navigateBack({
-				delta: deltaNum
-			})
+			if (this.canIUse("checkIsSupportSoterAuthentication")){
+				return this.isSupportSoter().then(function(res){
+					if (that.has(res, "supportMode") && that.find(res.supportMode, oname)){
+						return that.isSoterInDevice(oname).then(function (res) {
+							console.log(res)
+							return that.startSoter({ 
+								requestAuthModes:[oname], authContent: otitle,
+								challenge: '123456',
+							}).then(function (res) {
+								console.log(res)
+							}).catch(function (error) {
+								console.log(res)
+							})
+						}).catch(function (error) {
+							console.log(res)
+						})
+					}else{
+						return errorFn({})
+					}
+				})
+			}else{
+				return errorFn({})
+			}
 		}
 	})
 	wxQuery.extend({
@@ -1075,6 +1171,6 @@ var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function
 	});
 	wxQuery.extend(bletools);
 	wxapi.wxQuery = wxQuery;
-	//wxapi.uuid = generateUUID;
+	//this.uuid = generateUUID;
 	return wxQuery;
 }));
